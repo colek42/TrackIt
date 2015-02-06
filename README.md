@@ -11,7 +11,7 @@ Might need to install dependencies
 -------
 
 >mkdir -p workspace  
->https://github.com/colek42/TrackIt.git
+>git clone https://github.com/colek42/TrackIt.git  
 >cd catkin/src  
 >catkin_init_workspace  
 >cd ..  
