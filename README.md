@@ -24,4 +24,6 @@ DO NOT CHANGE DIRECTORIES INTO src.  The repository has the correct directory st
 >catkin make  
 
 
+Shell Scripts to start nodes are included in the catkin directory.
+
 
