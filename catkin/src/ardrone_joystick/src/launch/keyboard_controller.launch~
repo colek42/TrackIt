@@ -1,0 +1,5 @@
+<launch>
+
+	<!-- Launches the keyboard controller -->
+	<node name="keyboard_controller" pkg="ardrone_joystick" type="keyboard_controller.py" required="true"/>
+</launch>
