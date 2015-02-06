@@ -7,10 +7,19 @@ basename="$(dirname $script)"
 cd $basename
 
 
-
+#source environment
 source devel/setup.bash
-roslaunch tum_ardrone ardrone_driver.launch & 
-echo "Sleeping for 20 seconds to wait for connection"
-sleep 20
 
+#Start ROS Master
+roscore
+
+#start joy node
+rosrun joy joy_node &
+
+#start simulation
+roslaunch cvg_sim_gazebo ardrone_testworld.launch & 
+echo "Sleeping for 20 seconds to load simulation"
+sleep 10
+
+#start gui and state estimation node
 roslaunch tum_ardrone tum_ardrone.launch

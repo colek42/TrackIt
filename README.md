@@ -12,7 +12,8 @@ Might need to install dependencies
   
 -
 
->mkdir -p workspace  
+DO NOT CHANGE DIRECTORIES INTO src.  The repository has the correct directory structure fpr the project.  By default git will create a new directory named TrackIt in whatever directory you run the command, if you want the project in a different directory simply add an argument with the desired directory name.
+
 >git clone https://github.com/colek42/TrackIt.git  
 >cd catkin/src  
 >catkin_init_workspace  

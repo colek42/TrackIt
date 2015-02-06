@@ -1,6 +1,8 @@
 #Environment Setup Instructions
 
-##Set Up Ports for NAT
+##Set Up Ports for NAT is using VM
+
+--add image here
 
     UDP 5556
     UDP 5554
@@ -26,14 +28,6 @@
 
     sudo apt-get install python-rosinstall
 
-#Initialize Catkin Workspace
-
-    mkdir ~/workspace/src
-    cd ~/workspace/src
-    catkin_init_workspace
-    cd ~/workspace
-    catkin_make
-
 #Note about sourcing the workspace
 
 Everytime you want to run a command that is in the workpace you need to source
@@ -42,19 +36,7 @@ the environment with the following command.
     source devel/setup.bash
 
 
-#Install ARDrone Packages
 
-    cd ~/workspace/src
-    git clone https://github.com/tum-vision/tum_ardrone.git -b hydro-devel
-    cd ~/workspace
-    rosdep install tum_ardrone
-    catkin_make
+#Refer to readme.md for AR_Drone setup instructions 
 
-Everything you need for live flights is now installed.
-
-#Run Software
-
-    cd ~/workspace
-    source devel/setup.bash
-    roslaunch tum_ardrone ardrone_driver.launch & roslaunch tum_ardrone tum_ardrone.launch
 
