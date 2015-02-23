@@ -11,8 +11,9 @@ cd $basename
 source devel/setup.bash
 
 #Start ROS Master
-roscore
+roscore &
 
+sleep 5
 #start joy node
 rosrun joy joy_node &
 

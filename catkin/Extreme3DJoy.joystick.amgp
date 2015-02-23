@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<joystick configversion="14" appversion="2.10.1">
+<joystick configversion="15" appversion="2.11">
     <!--The SDL name for a joystick is included for informational purposes only.-->
     <sdlname>Logitech Logitech Extreme 3D Pro</sdlname>
     <!--The GUID for a joystick is included for informational purposes only.-->
