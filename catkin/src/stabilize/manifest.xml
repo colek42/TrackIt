@@ -1,0 +1,18 @@
+<package>
+  <description brief="stabilize">
+
+     stabilize
+
+  </description>
+  <author>cole</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/stabilize</url>
+  <depend package="sensor_msgs"/>
+  <depend package="cv_bridge"/>
+  <depend package="rospy"/>
+  <depend package="std_msgs"/>
+
+</package>
+
+
