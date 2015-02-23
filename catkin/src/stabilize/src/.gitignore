@@ -1,0 +1,5 @@
+/savitzky_golay_filter.py
+*.pyc
+/out.mpeg4.
+/htperlapse.py
+*.mp4
