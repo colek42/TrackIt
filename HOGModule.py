@@ -62,12 +62,26 @@ class H_O_G():
                 tmpp=self.ImageHOGComputer(files,hog)
                 print(tmpp) 
                 positive=positive+1
-                DS.write(str(tmpp[0])[2:-1]+","+str(tmpp[1])[2:-1]+","+str(tmpp[2])[2:-1]+","+str(tmpp[3])[2:-1]+","+str(tmpp[4])[2:-1]+","+str(tmpp[5])[2:-1]+","+str(tmpp[6])[2:-1]+",1\n")
+                
+                tmpstr=""
+                for i in tmpp:
+                    tmpstr=tmpstr+str(i)[2:-1]+","
+                tmpstr=tmpstr+"1,"+files[-11:-7]+"\n"
+                DS.write(tmpstr)
+                
+                #DS.write(str(tmpp[0])[2:-1]+","+str(tmpp[1])[2:-1]+","+str(tmpp[2])[2:-1]+","+str(tmpp[3])[2:-1]+","+str(tmpp[4])[2:-1]+","+str(tmpp[5])[2:-1]+","+str(tmpp[6])[2:-1]+",1\n")
             elif files.endswith("n.jpeg"):
                 tmpn=self.ImageHOGComputer(files,hog)
                 print(tmpn) 
                 negative=negative+1
-                DS.write(str(tmpn[0])[2:-1]+","+str(tmpn[1])[2:-1]+","+str(tmpn[2])[2:-1]+","+str(tmpn[3])[2:-1]+","+str(tmpn[4])[2:-1]+","+str(tmpn[5])[2:-1]+","+str(tmpn[6])[2:-1]+",0\n")
+                
+                tmpstr=""
+                for i in tmpp:
+                    tmpstr=tmpstr+str(i)[2:-1]+","
+                tmpstr=tmpstr+"0,"+files[-11:-7]+"\n"
+                DS.write(tmpstr)
+                
+                #DS.write(str(tmpn[0])[2:-1]+","+str(tmpn[1])[2:-1]+","+str(tmpn[2])[2:-1]+","+str(tmpn[3])[2:-1]+","+str(tmpn[4])[2:-1]+","+str(tmpn[5])[2:-1]+","+str(tmpn[6])[2:-1]+",0\n")
             else:
                 continue
         DS.close()
@@ -76,15 +90,16 @@ class H_O_G():
 # Trains and test a SVM using the CSV file generated from the FeatureVectorCreator method.        
     def Train_And_Test(self):
         HOG_data=np.loadtxt('dataset.csv',delimiter=",")
-        tmpdata=HOG_data[:,0:6]
-        target=HOG_data[:,7]
+        tmpdata=HOG_data[:,0:-3]
+        target=HOG_data[:,-2]
+        print(target)
         tmpdata[tmpdata==0]=np.nan
         imp=Imputer(missing_values='NaN',strategy='mean')
         data=imp.fit_transform(tmpdata)
-        for x in data:
-            print(str(x))
+        #for x in data:
+        #    print(str(x))
         data_train,data_test,target_train,target_test=train_test_split(data,target,test_size=0.3)
-        model=SVC()
+        model=SVC(kernel='linear', class_weight='auto')
         model.fit(data_train,target_train)
         print(model)
         expected=target_test
