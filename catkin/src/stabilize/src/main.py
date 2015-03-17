@@ -6,7 +6,7 @@ import roslib
 import traceback
 from sys import argv
 from gtk._gtk import Frame
-roslib.load_manifest('stabilize')
+#roslib.load_manifest('stabilize')
 import sys
 import rospy
 import sensor_msgs.msg
@@ -17,6 +17,9 @@ import numpy as np
 import cv
 import sensor_msgs.msg
 from time import sleep
+from humanDetect import findHumans
+from denseFlow import DenseFlow
+from flow2 import Flow
 
 
 def threaded(fn):
@@ -34,7 +37,7 @@ class stabilize:
         self.frame_idx = 0
         self.timerx = 0
         self.prev = None
-
+        self.i=0
         self.p0 = None
         self.use_ransac = True
         self.me = 0
@@ -43,27 +46,33 @@ class stabilize:
         self.kf = kalman()
         self.final = None
         self.hello = None
-        #self.img = cv2.VideoCapture('Feb162015.mp4')
-
+        self.img = cv2.VideoCapture('Feb162015.mp4')
+        self.features1 = None
+        self.features2 = None
         self.featuresLast = None
+        self.flow2 = Flow()
         self.guess = 0
         fourcc=cv2.cv.CV_FOURCC('I', 'Y', 'U', 'V')
-        self.vw = cv2.VideoWriter('/home/cole/outkalman2.avi', fourcc , 30, (20, 20))
-        rospy.Subscriber("ardrone/front/image_raw" , sensor_msgs.msg.Image, self.CallBack)
+        self.vw = None
+        #rospy.Subscriber("ardrone/front/image_raw" , sensor_msgs.msg.Image, self.CallBack)
+        self.findHumans = findHumans()
+        self.flow = DenseFlow()
         self.gotImage()
         
-        self.rec()
+        
+        
         
         ##Set Up Recorder
         
     
     @threaded
     def rec(self):
-        try:
+        if self.i > 1505:
             fourcc=cv2.cv.CV_FOURCC('I', 'Y', 'U', 'V')
-            self.vw = cv2.VideoWriter('/home/cole/outkalman2.avi', fourcc , 30, (self.frame.shape[:2]))
-        except:
-            self.rec()
+            self.vw = cv2.VideoWriter('/home/cole/outflow.avi', fourcc , 30, (self.frame.shape[:2][1], self.frame.shape[:2][0]))
+        else:
+           self.rec()
+
         
         
      
@@ -87,28 +96,42 @@ class stabilize:
     
     #@threaded
     def gotImage(self):
-
-        i=0
+        self.rec()
+        
         while True:
            
             
-            #self.image= cv2.copyMakeBorder((self.img.read()[1]),250,250,700,700,cv2.BORDER_CONSTANT,value=(0,0,0))
-            #self.image = cv2.resize(self.image, None, np.size(self.image), 0.5, 0.5, cv.CV_INTER_AREA);   
+            self.image= cv2.copyMakeBorder((self.img.read()[1]),250,250,700,700,cv2.BORDER_CONSTANT,value=(0,0,0))
+            self.image = cv2.resize(self.image, None, np.size(self.image), .75, .75, cv.CV_INTER_AREA) 
+            self.i+=1
             
             
             
             
             
-            
-            if self.image != None:
+            if self.image != None and self.i > 1500:
                 try:
 #                      
                     show = self.find_motion_vector(self.image)
+                    
+                    if self.i > 1520:
+                        #flow = self.flow.getFlow(self.showprev4, show)
+                        flow = self.flow2.flow(self.showprev3, show)
+                    if self.i > 1550:
+                        show = self.findHumans.getBox(show)
+                    self.showprev = show
+                    self.showprev2 = self.showprev
+                    self.showprev3 = self.showprev2
+                    self.showprev4 = self.showprev3
+                    self.showprev5 = self.showprev4
+                    self.showprev6 = self.showprev5
+                    
+                    
                     if self.hello == None:
                         self.hello = show
-                    if i%100 == 0:
+                    if self.i%100 == 0:
                     
-                        print i
+                        print self.i
                     #grey =  cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
                     
                     if self.final == None:
@@ -119,17 +142,19 @@ class stabilize:
                     ret,self.final = cv2.threshold(self.final,0,20,cv2.THRESH_TOZERO)
                     
                     self.final = cv2.addWeighted(self.hello, .9, show, .1, 0)
+
+                    
                     tmp = cvtColor(self.final, cv2.COLOR_BGR2GRAY)
                     tmp2 = np.float32(tmp)
                   
                     
                     #self.final=(self.final * .5)
-                    self.hello = np.where(show==0, self.final, show)
+                    self.hello = np.where(show==0, self.final, flow)
                          
 #                     self.final = cv2.addWeighted(self.final, .1, show, .9, 0)
 #                     self.final = cv2.overlayImage(self.final, .9, old, .1, 0)
                     #self.final = cv2.add(self.final, show, .5)                
-                    #    self.imLst = self.imLst[0:-40]
+                #    self.imLst = self.imLst[0:-40]
                     
                         #for idx, pic in enumerate(self.imLst):
                             
@@ -138,19 +163,24 @@ class stabilize:
                             
                     #else: self.final = show
                     
-                    b = self.vw.write(self.hello)
+                    if self.i > 1550:
+                        self.vw.write(self.hello)
+                        
+#                     if self.i > 1530:
+#                         self.hello = cv2.addWeighted(self.hello, .5, flow, .9, 0)
                     cv2.imshow("Image", self.hello)
                     
                     #cv2.imshow("Image", mask)
                     
                     cv2.waitKey(1)
-                    i+=1
+                    
                 except:
                     print traceback.format_exc()
                     self.final = None  
 
                     self.frame2 = None
                     self.featuresLast = None
+                    self.flow2.tracks = []
 
                     
 #         try:
@@ -189,7 +219,7 @@ class stabilize:
         """given 2 contiguous images in an image stream, returns the motion vector \
          between them"""
           
-        self.frame = cv2.cvtColor(imCurr, cv2.COLOR_BGR2GRAY)
+        self.frame = imCurr #cv2.cvtColor(imCurr, cv2.COLOR_BGR2GRAY)
           
         if self.frame2 == None:
             self.frame2 = self.frame.copy()
@@ -205,11 +235,11 @@ class stabilize:
 # #                 
 # #                     
 # #             #return numpy.array([0.0, 0.0])
-#         #features1 = cv2.goodFeaturesToTrack(self.frame, GF_MAX_CORNERS, GF_QUALITY_LEVEL, GF_MIN_DISTANCE, GF_BLOCK_SIZE)
-#         features2, st, err = cv2.calcOpticalFlowPyrLK(self.frame2, self.frame, features1, \
+#         self.features1 = cv2.goodFeaturesToTrack(self.frame, GF_MAX_CORNERS, GF_QUALITY_LEVEL, GF_MIN_DISTANCE, GF_BLOCK_SIZE)
+#         self.features2, st, err = cv2.calcOpticalFlowPyrLK(self.frame2, self.frame, self.features1, \
 #             nextPts=None, winSize=LK_WINDOW_SIZE, maxLevel=LK_MAX_LEVEL, \
 #             criteria=LK_CRITERIA)
-# 
+# # 
 #         if features2.size >= 8:  #if we dont have enough point to track dont even try.
 #         #delete bad features
 #             for idx, row in enumerate(features2):
@@ -247,14 +277,16 @@ class stabilize:
         
         #features2 = self.featuresLast
             
-        n=2
+        n=5
         for i in range(0, n):
-            trans = cv2.estimateRigidTransform(self.frame, self.frame2, fullAffine=False)
+            trans = cv2.estimateRigidTransform(imCurr, self.frame2, fullAffine=False)
             if trans is None:
                 break
              
             if i < n-1:
-                self.frame2 = cv2.warpAffine(self.frame, trans, (cols, rows))
+                self.kf.newValue(trans)
+                filtTrans = np.float32(self.kf.getValue())
+                imCurr = cv2.warpAffine(imCurr, filtTrans, (cols, rows))
         
         if trans != None:
             self.kf.newValue(trans)  ##if we know we have bad data we to not want to add it to our kalman set
@@ -267,6 +299,7 @@ class stabilize:
                 self.frame2 = None
                 self.featuresLast = None
                 self.guess = 0
+                self.flow2.tracks = []
 #     
 #         else:
 #             print "Not very many Points"
@@ -283,12 +316,14 @@ class stabilize:
 
         
     
-        filtTrans = np.float32(self.kf.getValue())
+        #filtTrans = np.float32(self.kf.getValue())
 
-        ret = cv2.warpAffine(imCurr, filtTrans, (cols, rows))
+        #ret = cv2.warpAffine(imCurr, filtTrans, (cols, rows))
     #         mask = self.bs.apply(ret)
     #         mask = cv2.cvtColor(mask,cv2.COLOR_GRAY2BGR)
-        return ret
+        
+        self.frame2 = imCurr
+        return imCurr
             
             
             #print 'it Worked!'
@@ -384,7 +419,7 @@ class kalman():
 
 
 def main():
-    rospy.init_node('sabilize', anonymous=True)
+    #rospy.init_node('sabilize', anonymous=True)
     start = stabilize()
     try:
         rospy.spin()
