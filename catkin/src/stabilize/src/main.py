@@ -104,16 +104,16 @@ class stabilize:
             self.image= cv2.copyMakeBorder((self.img.read()[1]),250,250,700,700,cv2.BORDER_CONSTANT,value=(0,0,0))
             self.image = cv2.resize(self.image, None, np.size(self.image), .75, .75, cv.CV_INTER_AREA) 
             self.i+=1
-            
-            
-            
-            
-            
+             
+             
+             
+             
+             
             if self.image != None and self.i > 1500:
                 try:
 #                      
                     show = self.find_motion_vector(self.image)
-                    
+                     
                     if self.i > 1520:
                         #flow = self.flow.getFlow(self.showprev4, show)
                         flow = self.flow2.flow(self.showprev3, show)
@@ -125,59 +125,59 @@ class stabilize:
                     self.showprev4 = self.showprev3
                     self.showprev5 = self.showprev4
                     self.showprev6 = self.showprev5
-                    
-                    
+                     
+                     
                     if self.hello == None:
                         self.hello = show
                     if self.i%100 == 0:
-                    
+                     
                         print self.i
                     #grey =  cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
-                    
+                     
                     if self.final == None:
                         self.hello = show
                         self.final = show
-
-                    
+ 
+                     
                     ret,self.final = cv2.threshold(self.final,0,20,cv2.THRESH_TOZERO)
-                    
+                     
                     self.final = cv2.addWeighted(self.hello, .9, show, .1, 0)
-
-                    
+ 
+                     
                     tmp = cvtColor(self.final, cv2.COLOR_BGR2GRAY)
                     tmp2 = np.float32(tmp)
-                  
-                    
+                   
+                     
                     #self.final=(self.final * .5)
                     self.hello = np.where(show==0, self.final, flow)
-                         
+                          
 #                     self.final = cv2.addWeighted(self.final, .1, show, .9, 0)
 #                     self.final = cv2.overlayImage(self.final, .9, old, .1, 0)
                     #self.final = cv2.add(self.final, show, .5)                
                 #    self.imLst = self.imLst[0:-40]
-                    
+                     
                         #for idx, pic in enumerate(self.imLst):
-                            
-                            
+                             
+                             
                             #self.final = cv2.addWeighted(self.final, 0, self.imLst[idx+5], 0, 0)
-                            
+                             
                     #else: self.final = show
-                    
+                     
                     if self.i > 1550:
                         self.vw.write(self.hello)
-                        
+                         
 #                     if self.i > 1530:
 #                         self.hello = cv2.addWeighted(self.hello, .5, flow, .9, 0)
                     cv2.imshow("Image", self.hello)
-                    
+                     
                     #cv2.imshow("Image", mask)
-                    
+                     
                     cv2.waitKey(1)
-                    
+                     
                 except:
                     print traceback.format_exc()
                     self.final = None  
-
+ 
                     self.frame2 = None
                     self.featuresLast = None
                     self.flow2.tracks = []
