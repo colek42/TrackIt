@@ -3,6 +3,7 @@ from sklearn.svm import SVC
 from sklearn import preprocessing
 from sklearn.cross_validation import train_test_split
 from sklearn.preprocessing import Imputer
+import pickle
 import cv2
 import numpy as np
 import os
@@ -23,8 +24,43 @@ class H_O_G():
         self.negativeSampleImages=0
         os.chdir(directory)
         print(os.getcwd())
-
-# Helper function for computing a image's feature vector using opencv's built in HOG feature vector cumpute function.
+        
+# Tests a video with the trained svm model.
+    def ViewSVMVideo(self):
+        videoName=raw_input("Enter name of video: ")
+        hog = cv2.HOGDescriptor()
+        model=pickle.load( open( "svm.p", "rb" ) )
+        tmp=[]
+        a=0
+        while (a<=3779):
+            print model.coef_[0][a]
+            tmp.append([model.coef_[0][a]])
+            print(str(a))
+            a=a+1
+        tmp.append([model.intercept_])    
+        tmpNum=np.array(tmp)
+        hog.setSVMDetector(tmpNum)
+        #hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+        hogParams = {'winStride': (8, 8), 'padding': (32, 32), 'scale': 1.05}
+        cap = cv2.VideoCapture(videoName)
+        while(True):
+            ret, frame = cap.read()
+            frameClone = frame.copy()
+            if not ret:
+                break
+            result = hog.detectMultiScale(frame, **hogParams)
+            print result
+            for r in result[0]:
+                fX, fY, fW, fH = r
+                cv2.rectangle(frameClone, (fX, fY), (fX + fW, fY + fH), (0, 255, 0), 2)
+            cv2.imshow('HOGframe',frameClone)
+            #cv2.imshow("frame",frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        cap.release()
+        cv2.destroyAllWindows()
+        
+# Helper function for computing a image's feature vector using opencv's built in HOG feature vector compute function.
     def ImageHOGComputer(self,img, hog):
         tmpImg = cv2.imread(img)
         featureVector = hog.compute(tmpImg)
@@ -90,23 +126,54 @@ class H_O_G():
 # Trains and test a SVM using the CSV file generated from the FeatureVectorCreator method.        
     def Train_And_Test(self):
         HOG_data=np.loadtxt('dataset.csv',delimiter=",")
-        tmpdata=HOG_data[:,0:-3]
+        tmpdata=HOG_data[:,0:-2]
         target=HOG_data[:,-2]
         print(target)
         tmpdata[tmpdata==0]=np.nan
         imp=Imputer(missing_values='NaN',strategy='mean')
         data=imp.fit_transform(tmpdata)
-        #for x in data:
-        #    print(str(x))
         data_train,data_test,target_train,target_test=train_test_split(data,target,test_size=0.3)
-        model=SVC(kernel='linear', class_weight='auto')
+        model=SVC(C=0.01,kernel='linear', class_weight='auto')
         model.fit(data_train,target_train)
+        print(data_train)
+        print(target_train)    
+        opencv_data_train=np.float32(data_train)
+        opencv_target_train=np.float32(target_train)     
+        svm_params = dict( kernel_type = cv2.SVM_LINEAR,
+                    svm_type = cv2.SVM_C_SVC,
+                    C=2.67, gamma=5.383)
+        svm = cv2.SVM()
+        svm.train(opencv_data_train,opencv_target_train, params=svm_params)
+        svm.save("hog_classifier.xml")  
         print(model)
         expected=target_test
         predicted=model.predict(data_test)
         target_names = ['Not Human', 'Human']
+        
+        #-------Currently a work in progress----Graphing the ROC Curve
+        #target_train = label_binarize(target_train, classes=[0, 1, 2])
+        #n_classes = target_train.shape[1]
+        #classifier = OneVsRestClassifier(svm.SVC(kernel='linear', probability=True))
+        #target_score = classifier.fit(data_train, target_train).decision_function(data_test)
+        #fpr = dict()
+        #tpr = dict()
+        #roc_auc = dict()
+        #for i in range(n_classes):
+        #    fpr[i], tpr[i], _ = roc_curve(target_test[:, i], target_score[:, i])
+        #fpr["micro"], tpr["micro"], _ = roc_curve(y_test.ravel(), y_score.ravel())
+        
+        #plt.figure()
+        #plt.plot(fpr["micro"], tpr["micro"],
+        #label='micro-average ROC curve (area = {0:0.2f})'
+        #      ''.format(roc_auc["micro"]))
+        #for i in range(n_classes):
+        #    plt.plot(fpr[i], tpr[i], label='ROC curve of class {0} (area = {1:0.2f})'
+        #                           ''.format(i, roc_auc[i]))
+        
         print(metrics.classification_report(expected,predicted,target_names=target_names))
         print(metrics.confusion_matrix(expected,predicted))
+        print(metrics.roc_curve(expected,predicted))
+        pickle.dump(model, open( "svm.p", "wb" ) )
 
 # Helper function that listens for mouse actions for the VideoCropperHelper method.    
     def draw_roi(self,event,x,y,flags,param):
@@ -215,8 +282,9 @@ if __name__ == '__main__':
     print("1. Display amount of samples in directory")
     print("2. Create feature vectors from samples in directory")
     print("3. Test and train the SVM")
-    print("4. Create positive and negative samples from videos in given directory---Work in progress---")
-    print("5. Exit")
+    print("4. Create positive and negative samples from videos in given directory")
+    print("5. View the svm model on a video.")
+    print("6. Exit")
     while(not end):
         inputCommand=raw_input("Ready for command: ")
         if (inputCommand=="1"):
@@ -228,6 +296,8 @@ if __name__ == '__main__':
         elif(inputCommand=="4"):
             HOGClass.VideoCropper()
         elif(inputCommand=="5"):
+            HOGClass.ViewSVMVideo()
+        elif(inputCommand=="6"):
             end=True
         else:
             print("Not a valid command. Try Again...")
