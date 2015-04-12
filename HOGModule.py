@@ -7,6 +7,7 @@ import pickle
 import cv2
 import numpy as np
 import os
+import xml.etree.ElementTree as ET
 
 # Global variables.
 gx=0
@@ -30,17 +31,43 @@ class H_O_G():
         videoName=raw_input("Enter name of video: ")
         hog = cv2.HOGDescriptor()
         model=pickle.load( open( "svm.p", "rb" ) )
+        svm = cv2.SVM()
+        svm.load("hog_classifier.xml")
         tmp=[]
         a=0
         while (a<=3779):
-            print model.coef_[0][a]
             tmp.append([model.coef_[0][a]])
-            print(str(a))
             a=a+1
-        tmp.append([model.intercept_])    
+        #tmp.append([model.intercept_])   
+        tmp.append([-6.6]) 
         tmpNum=np.array(tmp)
-        hog.setSVMDetector(tmpNum)
-        #hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+        
+        tree = ET.parse('hog_classifier.xml')
+        XMLarray = []
+        a=[]
+        n=[]
+        r=0
+        for sp in tree.iter('_'):
+            a.append(sp.text)
+        for element in tree.iter('rho'):
+            r=element.text
+            r=r[0:10]+r[-5:]
+        XMLarray=a[0].split()
+        XMLarray.append(r)
+        for x in XMLarray:
+            n.append(float(x))
+        q=np.asarray(n)
+        z=np.reshape(q,(3781,1))
+        
+        print z
+        print cv2.HOGDescriptor_getDefaultPeopleDetector()
+        print tmpNum
+        
+        
+        #hog.setSVMDetector(z)
+        #hog.setSVMDetector(tmpNum)
+        hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+        
         hogParams = {'winStride': (8, 8), 'padding': (32, 32), 'scale': 1.05}
         cap = cv2.VideoCapture(videoName)
         while(True):
@@ -133,7 +160,7 @@ class H_O_G():
         imp=Imputer(missing_values='NaN',strategy='mean')
         data=imp.fit_transform(tmpdata)
         data_train,data_test,target_train,target_test=train_test_split(data,target,test_size=0.3)
-        model=SVC(C=0.01,kernel='linear', class_weight='auto')
+        model=SVC(C=2.67,gamma=5.383,kernel='linear', class_weight='auto')
         model.fit(data_train,target_train)
         print(data_train)
         print(target_train)    
