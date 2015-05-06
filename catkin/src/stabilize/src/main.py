@@ -6,7 +6,7 @@ import roslib
 import traceback
 from sys import argv
 from gtk._gtk import Frame
-#roslib.load_manifest('stabilize')
+roslib.load_manifest('stabilize')
 import sys
 import rospy
 import sensor_msgs.msg
@@ -20,6 +20,7 @@ from time import sleep
 from humanDetect import findHumans
 from denseFlow import DenseFlow
 from flow2 import Flow
+import calibrate
 
 
 def threaded(fn):
@@ -46,7 +47,7 @@ class stabilize:
         self.kf = kalman()
         self.final = None
         self.hello = None
-        self.img = cv2.VideoCapture('Feb162015.mp4')
+        #self.img = cv2.VideoCapture('Feb162015.mp4')
         self.features1 = None
         self.features2 = None
         self.featuresLast = None
@@ -54,10 +55,13 @@ class stabilize:
         self.guess = 0
         fourcc=cv2.cv.CV_FOURCC('I', 'Y', 'U', 'V')
         self.vw = None
-        #rospy.Subscriber("ardrone/front/image_raw" , sensor_msgs.msg.Image, self.CallBack)
+        self.imgCorr = calibrate.ImageCorrection()
+        rospy.Subscriber("ardrone/front/image_raw" , sensor_msgs.msg.Image, self.CallBack)
         self.findHumans = findHumans()
         self.flow = DenseFlow()
+        sleep(5)
         self.gotImage()
+        
         
         
         
@@ -88,37 +92,51 @@ class stabilize:
         
 
     def CallBack(self, image):
-        img = self.bridge.imgmsg_to_cv2(image)
+        self.img = self.bridge.imgmsg_to_cv2(image)
+        #self.image= self.imgCorr.calibratedImage(img)
+        #cv2.imshow("Image", img)
+        #cv2.waitKey(1)
         #img = cv2.VideoCapture('Feb162015.mp4')
+         
 
 
-        self.image= cv2.copyMakeBorder(img,250,250,1000,1000,cv2.BORDER_CONSTANT,value=(0,0,0))   
+        #self.image= cv2.copyMakeBorder(img,250,250,1000,1000,cv2.BORDER_CONSTANT,value=(0,0,0))   
     
     #@threaded
     def gotImage(self):
-        self.rec()
+        #self.rec()
         
         while True:
-           
+            #cv2.imshow("Image", self.img)
+            try:
+                self.image= self.imgCorr.calibratedImage(self.img)
+                self.image= cv2.copyMakeBorder(self.image,250,250,1000,1000,cv2.BORDER_CONSTANT,value=(0,0,0))   
+            except:
+                self.i+-1
             
-            self.image= cv2.copyMakeBorder((self.img.read()[1]),250,250,700,700,cv2.BORDER_CONSTANT,value=(0,0,0))
-            self.image = cv2.resize(self.image, None, np.size(self.image), .75, .75, cv.CV_INTER_AREA) 
+            #self.image= cv2.copyMakeBorder((self.img.read()[1]),250,250,700,700,cv2.BORDER_CONSTANT,value=(0,0,0))
+            #self.image = cv2.resize(self.image, None, np.size(self.image), .75, .75, cv.CV_INTER_AREA) 
+            
+            
             self.i+=1
              
              
              
              
              
-            if self.image != None and self.i > 1500:
+            if self.image != None and self.i > 100:
                 try:
 #                      
                     show = self.find_motion_vector(self.image)
                      
-                    if self.i > 1520:
+                    if self.i > 120:
                         #flow = self.flow.getFlow(self.showprev4, show)
-                        flow = self.flow2.flow(self.showprev3, show)
-                    if self.i > 1550:
-                        show = self.findHumans.getBox(show)
+                        flow = self.flow2.flow(self.showprev2, show)
+                        
+                        #flow = show
+                        
+                    #if self.i > 150:
+                        #show = self.findHumans.getBox(show)
                     self.showprev = show
                     self.showprev2 = self.showprev
                     self.showprev3 = self.showprev2
@@ -150,6 +168,7 @@ class stabilize:
                      
                     #self.final=(self.final * .5)
                     self.hello = np.where(show==0, self.final, flow)
+                    #self.hello = self.final
                           
 #                     self.final = cv2.addWeighted(self.final, .1, show, .9, 0)
 #                     self.final = cv2.overlayImage(self.final, .9, old, .1, 0)
@@ -163,8 +182,8 @@ class stabilize:
                              
                     #else: self.final = show
                      
-                    if self.i > 1550:
-                        self.vw.write(self.hello)
+                    #if self.i > 1550:
+                    #    self.vw.write(self.hello)
                          
 #                     if self.i > 1530:
 #                         self.hello = cv2.addWeighted(self.hello, .5, flow, .9, 0)
@@ -207,12 +226,12 @@ class stabilize:
 # 
 # 
     def find_motion_vector(self, imCurr):
-        LK_WINDOW_SIZE = (7, 7)
+        LK_WINDOW_SIZE = (15, 15)
         LK_MAX_LEVEL = 200
-        LK_CRITERIA = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01)
-        GF_MAX_CORNERS = 2000
+        LK_CRITERIA = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.11)
+        GF_MAX_CORNERS = 200
         GF_QUALITY_LEVEL = 0.1
-        GF_MIN_DISTANCE = 5
+        GF_MIN_DISTANCE = 10
         GF_BLOCK_SIZE = 7
          
          
@@ -277,16 +296,17 @@ class stabilize:
         
         #features2 = self.featuresLast
             
-        n=5
+        n=4
         for i in range(0, n):
             trans = cv2.estimateRigidTransform(imCurr, self.frame2, fullAffine=False)
             if trans is None:
                 break
              
             if i < n-1:
-                self.kf.newValue(trans)
-                filtTrans = np.float32(self.kf.getValue())
-                imCurr = cv2.warpAffine(imCurr, filtTrans, (cols, rows))
+                #self.kf.newValue(trans)
+                #filtTrans = np.float32(self.kf.getValue())
+                #imCurr = cv2.warpAffine(imCurr, filtTrans, (cols, rows))
+                imCurr = cv2.warpAffine(imCurr, trans, (cols, rows))
         
         if trans != None:
             self.kf.newValue(trans)  ##if we know we have bad data we to not want to add it to our kalman set
@@ -419,7 +439,7 @@ class kalman():
 
 
 def main():
-    #rospy.init_node('sabilize', anonymous=True)
+    rospy.init_node('sabilize', anonymous=True)
     start = stabilize()
     try:
         rospy.spin()
