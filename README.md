@@ -1,5 +1,5 @@
 # TrackIt
-Project for CSC 434
+This is a project I did in college.  It uses HOG to track humans and plot them on a map.  What makes this interesting is that the ARDrone has no GPS, so locations need to be inferred.  I used LSD Slam for this.  Please see the paper in this repo for details.  https://github.com/colek42/TrackIt/blob/master/human-detection-localization.pdf
 
 ####Depends on
 ROS Indigo/Ubuntu 14.04
